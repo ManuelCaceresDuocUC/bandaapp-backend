@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: bandaapp-backend
+    env: java
+    buildCommand: "./mvnw clean package -DskipTests"
+    startCommand: "java -jar target/*.jar"
+    envVars:
+      - key: DB_URL
+        value: jdbc:mysql://hopper.proxy.rlwy.net:35471/railway?useSSL=false&serverTimezone=America/Santiago
+      - key: DB_USERNAME
+        value: root
+      - key: DB_PASSWORD
+        value: MvelOcFTpJpYxmPGdKccksOFWrRXSRJb
+      - key: TZ
+        value: America/Santiago
