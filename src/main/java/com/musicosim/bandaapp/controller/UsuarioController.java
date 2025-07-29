@@ -35,7 +35,7 @@ public class UsuarioController {
     }
     @PostMapping("/login")
 public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
-    Optional<Usuario> optionalUsuario = usuarioRepository.findByNPI(loginRequest.getNpi());
+    Optional<Usuario> optionalUsuario = usuarioRepository.findByNpi(loginRequest.getNpi());
 
     if (optionalUsuario.isEmpty()) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario no encontrado");
@@ -57,7 +57,7 @@ public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
     }
     @GetMapping("/buscar-por-npi/{npi}")
     public ResponseEntity<Usuario> buscarPorNpi(@PathVariable String npi) {
-        return usuarioRepository.findByNPI(npi)
+        return usuarioRepository.findByNpi(npi)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
