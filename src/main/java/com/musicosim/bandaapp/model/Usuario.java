@@ -27,6 +27,7 @@ public class Usuario {
     private String rol; // MUSICO, MUSICO_ADMINISTRATIVO, etc.
 
     private String cargo;
+    private String npi;
 
     @ManyToOne
     @JoinColumn(name = "banda_id")
@@ -41,6 +42,13 @@ public class Usuario {
     public void setId(Long id) {
         this.id = id;
     }
+    public String getNpi() {
+    return npi;
+}
+
+public void setNpi(String npi) {
+    this.npi = npi;
+}
 
     public String getNombre() {
         return nombre;

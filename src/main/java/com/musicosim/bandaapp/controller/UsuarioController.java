@@ -1,6 +1,7 @@
 package com.musicosim.bandaapp.controller;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -34,10 +35,13 @@ public class UsuarioController {
     }
     @PostMapping("/login")
 public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
-    Usuario usuario = usuarioRepository.findByEmail(loginRequest.getEmail());
-    if (usuario == null) {
+    Optional<Usuario> optionalUsuario = usuarioRepository.findByNPI(loginRequest.getNpi());
+
+    if (optionalUsuario.isEmpty()) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario no encontrado");
     }
+
+    Usuario usuario = optionalUsuario.get();
 
     if (!usuario.getContrasena().equals(loginRequest.getPassword())) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Contraseña incorrecta");
@@ -50,6 +54,12 @@ public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         return usuarioRepository.findById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
+    }
+    @GetMapping("/buscar-por-npi/{npi}")
+    public ResponseEntity<Usuario> buscarPorNpi(@PathVariable String npi) {
+        return usuarioRepository.findByNPI(npi)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
 }

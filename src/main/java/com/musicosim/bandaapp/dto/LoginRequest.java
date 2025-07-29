@@ -1,16 +1,15 @@
 package com.musicosim.bandaapp.dto;
-
 public class LoginRequest {
-    private String email;
+    private String npi;
     private String password;
 
     // Getters y setters
-    public String getEmail() {
-        return email;
+    public String getNpi() {
+        return npi;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public void setNpi(String npi) {
+        this.npi = npi;
     }
 
     public String getPassword() {
