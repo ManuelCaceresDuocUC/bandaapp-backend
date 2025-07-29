@@ -26,8 +26,10 @@ public class AsistenciaController {
 
     @Autowired
     private AsistenciaRepository asistenciaRepository;
-    private static final double CUARTEL_LAT = -33.055110;
-private static final double CUARTEL_LNG = -71.620755;
+    private static final double CUARTEL_LAT = -33.020705;
+private static final double CUARTEL_LNG = -71.638160;
+    private static final List<String> ESTADOS_PERSISTENTES = List.of("PERMISO", "CATEGORIA");
+
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -80,35 +82,48 @@ public ResponseEntity<?> registrarAsistencia(@RequestBody RegistroAsistenciaRequ
         CUARTEL_LAT, CUARTEL_LNG
     );
 
-    if (distancia > 200) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body("Fuera de rango permitido para registrar asistencia.");
-    }
-
-    // Buscar el usuario por ID
     Usuario usuario = usuarioRepository.findById(request.getUsuarioId())
             .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-    // Verificar si ya registró asistencia hoy
-    boolean yaExiste = asistenciaRepository
+    LocalDate hoy = LocalDate.now();
+
+    boolean yaExisteHoy = asistenciaRepository
         .findByUsuarioId(usuario.getId())
         .stream()
-        .anyMatch(a -> a.getFecha().equals(LocalDate.now()));
+        .anyMatch(a -> a.getFecha().equals(hoy));
 
-    if (yaExiste) {
+    if (yaExisteHoy) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
             .body("Ya existe un registro de asistencia para hoy.");
     }
 
-    // Crear y guardar asistencia
-    Asistencia asistencia = new Asistencia();
-    asistencia.setUsuario(usuario);
-    asistencia.setFecha(LocalDate.now());
-    asistencia.setEstado("ASISTE");
-    asistencia.setObservaciones("Registrado por geolocalización");
+    // Buscar la última asistencia anterior
+    Asistencia ultima = asistenciaRepository
+        .findByUsuarioId(usuario.getId())
+        .stream()
+        .filter(a -> a.getFecha().isBefore(hoy))
+        .max((a1, a2) -> a1.getFecha().compareTo(a2.getFecha()))
+        .orElse(null);
 
-    asistenciaRepository.save(asistencia);
+    Asistencia nueva = new Asistencia();
+    nueva.setUsuario(usuario);
+    nueva.setFecha(hoy);
 
+    if (distancia <= 200) {
+        // Está en el cuartel → registrar como A BORDO
+        nueva.setEstado("A BORDO");
+        nueva.setObservaciones("Registrado presencialmente por geolocalización");
+    } else if (ultima != null && List.of("PERMISO", "CATEGORIA").contains(ultima.getEstado().toUpperCase())) {
+        // Fuera del rango y tiene estado persistente → replicar
+        nueva.setEstado(ultima.getEstado());
+        nueva.setObservaciones("Estado replicado automáticamente desde el " + ultima.getFecha());
+    } else {
+        // Fuera del rango sin estado persistente → denegar
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body("Fuera de rango permitido para registrar asistencia.");
+    }
+
+    asistenciaRepository.save(nueva);
     return ResponseEntity.ok("Asistencia registrada correctamente.");
 }
 
