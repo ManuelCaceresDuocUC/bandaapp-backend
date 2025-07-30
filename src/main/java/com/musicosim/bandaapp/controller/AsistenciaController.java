@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,8 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.musicosim.bandaapp.dto.RegistroAsistenciaRequest;
 import com.musicosim.bandaapp.model.Asistencia;
+import com.musicosim.bandaapp.model.EstadoVigente;
 import com.musicosim.bandaapp.model.Usuario;
 import com.musicosim.bandaapp.repository.AsistenciaRepository;
+import com.musicosim.bandaapp.repository.EstadoVigenteRepository;
 import com.musicosim.bandaapp.repository.UsuarioRepository;
 
 @RestController
@@ -28,7 +31,7 @@ public class AsistenciaController {
     private AsistenciaRepository asistenciaRepository;
     private static final double CUARTEL_LAT = -33.020705;
 private static final double CUARTEL_LNG = -71.638160;
-    private static final List<String> ESTADOS_PERSISTENTES = List.of("PERMISO", "CATEGORIA");
+private static final List<String> ESTADOS_PERSISTENTES = List.of("PERMISO", "CATEGORIA", "LICENCIA");
 
 
     @Autowired
@@ -75,7 +78,10 @@ public ResponseEntity<?> registrar(@RequestBody Asistencia asistencia) {
 
 
 
-    @PostMapping("/registrar")
+    @Autowired
+private EstadoVigenteRepository estadoVigenteRepository;
+
+@PostMapping("/registrar")
 public ResponseEntity<?> registrarAsistencia(@RequestBody RegistroAsistenciaRequest request) {
     double distancia = calcularDistanciaMetros(
         request.getLatitud(), request.getLongitud(),
@@ -97,30 +103,49 @@ public ResponseEntity<?> registrarAsistencia(@RequestBody RegistroAsistenciaRequ
             .body("Ya existe un registro de asistencia para hoy.");
     }
 
-    // Buscar la última asistencia anterior
-    Asistencia ultima = asistenciaRepository
-        .findByUsuarioId(usuario.getId())
-        .stream()
-        .filter(a -> a.getFecha().isBefore(hoy))
-        .max((a1, a2) -> a1.getFecha().compareTo(a2.getFecha()))
-        .orElse(null);
+    String estado = request.getEstado() != null ? request.getEstado().toUpperCase() : null;
 
     Asistencia nueva = new Asistencia();
     nueva.setUsuario(usuario);
     nueva.setFecha(hoy);
+    nueva.setObservaciones(request.getObservaciones());
 
+    // 📌 Caso 1: Registro manual con estado explícito
+    if (estado != null) {
+        nueva.setEstado(estado);
+        asistenciaRepository.save(nueva);
+
+        if (ESTADOS_PERSISTENTES.contains(estado)) {
+            EstadoVigente vigente = estadoVigenteRepository.findByUsuarioId(usuario.getId())
+                    .orElse(new EstadoVigente());
+            vigente.setUsuario(usuario);
+            vigente.setEstado(estado);
+            vigente.setDesde(hoy);
+            vigente.setObservaciones(request.getObservaciones());
+            estadoVigenteRepository.save(vigente);
+        } else {
+            estadoVigenteRepository.deleteByUsuarioId(usuario.getId());
+        }
+
+        return ResponseEntity.ok("Asistencia manual registrada correctamente.");
+    }
+
+    // 📌 Caso 2: Registro automático con geolocalización
     if (distancia <= 200) {
-        // Está en el cuartel → registrar como A BORDO
         nueva.setEstado("A BORDO");
         nueva.setObservaciones("Registrado presencialmente por geolocalización");
-    } else if (ultima != null && List.of("PERMISO", "CATEGORIA").contains(ultima.getEstado().toUpperCase())) {
-        // Fuera del rango y tiene estado persistente → replicar
-        nueva.setEstado(ultima.getEstado());
-        nueva.setObservaciones("Estado replicado automáticamente desde el " + ultima.getFecha());
+        estadoVigenteRepository.deleteByUsuarioId(usuario.getId());
     } else {
-        // Fuera del rango sin estado persistente → denegar
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-            .body("Fuera de rango permitido para registrar asistencia.");
+        // Sin geolocalización válida → verificar estado persistente
+        var vigenteOpt = estadoVigenteRepository.findByUsuarioId(usuario.getId());
+        if (vigenteOpt.isPresent()) {
+            var vigente = vigenteOpt.get();
+            nueva.setEstado(vigente.getEstado());
+            nueva.setObservaciones("Estado replicado automáticamente desde el " + vigente.getDesde());
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body("Fuera de rango permitido para registrar asistencia.");
+        }
     }
 
     asistenciaRepository.save(nueva);
@@ -128,10 +153,33 @@ public ResponseEntity<?> registrarAsistencia(@RequestBody RegistroAsistenciaRequ
 }
 
 
+
     @GetMapping("/usuario/{id}")
     public List<Asistencia> porUsuario(@PathVariable Long id) {
         return asistenciaRepository.findByUsuarioId(id);
     }
+
+    @GetMapping("/asistencia/faltantes")
+public ResponseEntity<List<Usuario>> obtenerUsuariosSinAsistencia(
+        @RequestParam Long bandaId,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+
+    List<Asistencia> asistencias = asistenciaRepository.findByFechaAndUsuario_Banda_Id(fecha, bandaId);
+
+    List<Long> idsConAsistencia = asistencias.stream()
+            .map(a -> a.getUsuario().getId())
+            .toList();
+
+    List<Usuario> faltantes;
+    if (idsConAsistencia.isEmpty()) {
+        // Si nadie ha registrado asistencia, traer todos los usuarios de la banda
+        faltantes = usuarioRepository.findByBandaId(bandaId);
+    } else {
+        faltantes = usuarioRepository.findByBandaIdAndIdNotIn(bandaId, idsConAsistencia);
+    }
+
+    return ResponseEntity.ok(faltantes);
+}
 
     @GetMapping
     public List<Asistencia> porFechaYBanda(@RequestParam LocalDate fecha, @RequestParam Long bandaId) {
