@@ -156,11 +156,11 @@ public ResponseEntity<?> registrarAsistencia(@RequestBody RegistroAsistenciaRequ
 }
 
 
+
 @GetMapping("/hoy")
-public ResponseEntity<List<Asistencia>> obtenerAsistenciasDeHoy(@RequestParam Long bandaId) {
+public List<Asistencia> obtenerAsistenciasDeHoy(@RequestParam Long bandaId) {
     LocalDate hoy = LocalDate.now();
-    List<Asistencia> asistencias = asistenciaRepository.findByFechaAndUsuario_Banda_Id(hoy, bandaId);
-    return ResponseEntity.ok(asistencias);
+    return asistenciaRepository.findByFechaAndUsuario_Banda_Id(hoy, bandaId);
 }
 
     @GetMapping("/usuario/{id}")
