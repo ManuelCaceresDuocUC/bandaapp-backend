@@ -10,11 +10,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.musicosim.bandaapp.dto.EstadoAsistenciaRequest;
 import com.musicosim.bandaapp.dto.RegistroAsistenciaRequest;
 import com.musicosim.bandaapp.model.Asistencia;
 import com.musicosim.bandaapp.model.EstadoVigente;
@@ -179,6 +181,21 @@ public ResponseEntity<List<Usuario>> obtenerUsuariosSinAsistencia(
     }
 
     return ResponseEntity.ok(faltantes);
+}
+@PutMapping("/asistencias/{id}")
+public ResponseEntity<?> actualizarEstadoAsistencia(@PathVariable Long id, @RequestBody EstadoAsistenciaRequest request) {
+    List<Asistencia> asistencias = asistenciaRepository.findByUsuarioId(id);
+
+    if (asistencias.isEmpty()) {
+        return ResponseEntity.notFound().build();
+    }
+
+    // Supongamos que quieres actualizar la última asistencia registrada
+    Asistencia asistencia = asistencias.get(asistencias.size() - 1);
+    asistencia.setEstado(request.getNuevoEstado());
+    asistenciaRepository.save(asistencia);
+
+    return ResponseEntity.ok("Estado actualizado correctamente.");
 }
 
     @GetMapping
