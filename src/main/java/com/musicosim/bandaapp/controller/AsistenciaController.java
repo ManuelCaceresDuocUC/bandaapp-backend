@@ -189,8 +189,10 @@ public ResponseEntity<List<Usuario>> obtenerUsuariosSinAsistencia(
 
     return ResponseEntity.ok(faltantes);
 }
-@PutMapping("/asistencias/{id}")
-public ResponseEntity<?> actualizarEstadoAsistencia(@PathVariable Long id, @RequestBody EstadoAsistenciaRequest request) {
+@PutMapping("/{id}")
+public ResponseEntity<?> actualizarEstadoAsistencia(
+        @PathVariable Long id,
+        @RequestBody EstadoAsistenciaRequest request) {
     List<Asistencia> asistencias = asistenciaRepository.findByUsuarioId(id);
 
     if (asistencias.isEmpty()) {
