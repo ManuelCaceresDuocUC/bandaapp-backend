@@ -131,6 +131,7 @@ public ResponseEntity<?> registrarAsistencia(@RequestBody RegistroAsistenciaRequ
 
         return ResponseEntity.ok("Asistencia manual registrada correctamente.");
     }
+    
 
     // 📌 Caso 2: Registro automático con geolocalización
     if (distancia <= 200) {
@@ -155,6 +156,12 @@ public ResponseEntity<?> registrarAsistencia(@RequestBody RegistroAsistenciaRequ
 }
 
 
+@GetMapping("/hoy")
+public ResponseEntity<List<Asistencia>> obtenerAsistenciasDeHoy(@RequestParam Long bandaId) {
+    LocalDate hoy = LocalDate.now();
+    List<Asistencia> asistencias = asistenciaRepository.findByFechaAndUsuario_Banda_Id(hoy, bandaId);
+    return ResponseEntity.ok(asistencias);
+}
 
     @GetMapping("/usuario/{id}")
     public List<Asistencia> porUsuario(@PathVariable Long id) {
