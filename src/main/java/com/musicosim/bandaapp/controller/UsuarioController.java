@@ -47,8 +47,21 @@ public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Contraseña incorrecta");
     }
 
+    String deviceId = loginRequest.getDeviceId();
+
+    if (usuario.getDeviceId() == null) {
+        // Primera vez: registrar deviceId
+        usuario.setDeviceId(deviceId);
+        usuarioRepository.save(usuario);
+    } else if (!usuario.getDeviceId().equals(deviceId)) {
+        // Intento desde otro dispositivo
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body("Este usuario ya ha iniciado sesión desde otro dispositivo.");
+    }
+
     return ResponseEntity.ok(usuario);
 }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<Usuario> obtenerPorId(@PathVariable Long id) {

@@ -20,4 +20,14 @@ public class LoginRequest {
     public void setPassword(String password) {
         this.password = password;
     }
+    private String deviceId;
+
+public String getDeviceId() {
+    return deviceId;
+}
+
+public void setDeviceId(String deviceId) {
+    this.deviceId = deviceId;
+}
+
 }

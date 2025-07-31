@@ -21,6 +21,8 @@ public class Usuario {
 
     @Column(unique = true, nullable = false)
     private String email;
+    @Column(name = "device_id")
+private String deviceId;
 
     private String contrasena;
 
@@ -97,4 +99,12 @@ public void setNpi(String npi) {
     public void setBanda(Banda banda) {
         this.banda = banda;
     }
+    public String getDeviceId() {
+    return deviceId;
+}
+
+public void setDeviceId(String deviceId) {
+    this.deviceId = deviceId;
+}
+
 }
