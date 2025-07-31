@@ -193,19 +193,16 @@ public ResponseEntity<List<Usuario>> obtenerUsuariosSinAsistencia(
 public ResponseEntity<?> actualizarEstadoAsistencia(
         @PathVariable Long id,
         @RequestBody EstadoAsistenciaRequest request) {
-    List<Asistencia> asistencias = asistenciaRepository.findByUsuarioId(id);
 
-    if (asistencias.isEmpty()) {
-        return ResponseEntity.notFound().build();
-    }
-
-    // Supongamos que quieres actualizar la última asistencia registrada
-    Asistencia asistencia = asistencias.get(asistencias.size() - 1);
-    asistencia.setEstado(request.getNuevoEstado());
-    asistenciaRepository.save(asistencia);
-
-    return ResponseEntity.ok("Estado actualizado correctamente.");
+    return asistenciaRepository.findById(id)
+        .map(asistencia -> {
+            asistencia.setEstado(request.getNuevoEstado());
+            asistenciaRepository.save(asistencia);
+            return ResponseEntity.ok("Estado actualizado correctamente.");
+        })
+        .orElse(ResponseEntity.notFound().build());
 }
+
 
     @GetMapping
     public List<Asistencia> porFechaYBanda(@RequestParam LocalDate fecha, @RequestParam Long bandaId) {
